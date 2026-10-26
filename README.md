@@ -1,4 +1,32 @@
-# LightLetter
+# LightLetter — CNN 가속기 기반 손글씨 인식 및 BFSK 광통신 시스템
+
+손글씨를 카메라로 촬영해 FPGA의 CNN 가속기로 인식하고, 인식한 문자를 BFSK 레이저 광통신으로 전송해
+수신부에서 FFT로 복원하는 7인 팀 프로젝트입니다. Zybo Z7-20 두 대를 송신부와 수신부로 구성했습니다.
+
+- **진행**: 경기도팹리스아카데미 온디바이스AI 시스템반도체 설계 2기 (2026.09.09 ~ 2026.10.15)
+- **하드웨어**: Zybo Z7-20 ×2, Pcam 5C, 레이저 모듈, BPW34 광센서
+- **개발 환경**: Vivado / Vitis 2020.2, Verilog, C, Python
+
+## 시스템 구성
+
+- **송신부**: 카메라 → VDMA → DDR → PS 글자 영역 추출(ArUco) → DMA → PL 이미지 전처리 → CNN → 패킷·CRC 생성 → BFSK 레이저 송신
+- **수신부**: 광센서 → XADC → FFT Buffer → 128-point FFT → BFSK 복조 → CRC 검사 → UART → PC UI
+
+## 본인 역할 (조성재, 팀장)
+
+- 팀장으로서 팀원 간 의견 조율
+- **이미지 전처리 RTL** 설계 및 개선 — 흑백 변환·극성 반전, 임계값 배경 제거, Bounding Box 기반 글자 추출, 종횡비 유지 정규화, 28×28 중앙 배치 (`tx/preprocess/`)
+- **Convolution 연산부** 설계 및 검증 — 3채널 Line Buffer, 3×3 Window, 병렬 MAC, Adder Tree, Conv2 두 Phase 연산을 위한 연산부 재사용 구조 (`tx/cnn/`)
+- **DDR–DMA–전처리–CNN 연동** 및 Vivado ILA를 이용한 실보드 프레임 캡처 확인
+
+CNN 제어·Pooling·FC, BFSK 송수신부, FFT는 팀원들과 역할을 나누어 구현했습니다.
+
+## 결과
+
+- 'HELLO' 다섯 글자를 촬영·인식한 뒤 광통신으로 전송하고, 수신부에서 같은 문자열을 복원하는 시연 완료
+- 전처리 및 CNN 가속기(PL 100 MHz)는 CPU(667 MHz) 대비 처리 시간 **6.22배 단축**, 에너지 **93.2% 감소** (프로젝트 측정 기준)
+
+---
 
 ## How to run
 
@@ -24,7 +52,7 @@ The BFSK TX history is imported from Critical-mankind/BFSK_Tx.
 BFSK TX RTL and testbenches: `tx/bfsk_tx/`. Nucleo receiver test: `tx/bfsk_tx/nucleo_checker/`.
 The standalone TX test application and Vivado test projects are kept in `legacy/`.
 
-# FPGA BFSK Optical Communication
+## FPGA BFSK Optical Communication
 
 FPGA-based optical communication project using BFSK modulation and 128-point FFT frequency detection.
 
@@ -72,6 +100,7 @@ project from scripts with paths relative to the script, so a fresh clone works o
 - RTL is written in Verilog.
 - Do not delete previously PASSed code without a recorded reason.
 - Keep PASSed testbenches for regression.
+
 ## RX UART to PC UI
 
 The September 2026 RX build sends decoded packets to the PC through PS7 UART1 as CRLF-terminated CSV at 115200 baud. See `rx/docs/rx_uart_protocol.md` for the wire format and `rx/vitis/src/` for the Vitis application source.
